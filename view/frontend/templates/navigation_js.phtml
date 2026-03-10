@@ -1,0 +1,33 @@
+<?php $_helper = $this->helper('WeltPixel\NavigationLinks\Helper\Data'); ?>
+<?php
+$megaMenuOverlayFocusEnabled = $_helper->getMegaMenuOverlayOption();
+$designSettingsEnabled = $_helper->isDesignSettingsEnabled();
+$cspNonceProvider = $_helper->getCspNonceProvider();
+?>
+
+<?php if($megaMenuOverlayFocusEnabled && $designSettingsEnabled) { ?>
+    <div class="overlay-focus-megamenu"></div>
+<?php } ?>
+<script<?php if ($cspNonceProvider) : ?> nonce="<?= $block->escapeHtmlAttr($cspNonceProvider->generateNonce()) ?>"<?php endif; ?>>
+    window.screenM = '<?php /* @noEscape */ echo $_helper->getMobileThreshold() + 1 ; ?>';
+    window.widthThreshold = '<?php /* @noEscape */ echo $_helper->getWidthThreshold() + 1; ?>';
+    window.designSettingsEnabled = '<?php /* @noEscape */ echo $_helper->isDesignSettingsEnabled(); ?>';
+    window.menuFocusOverlay = '<?php /* @noEscape */ echo $_helper->getMegaMenuOverlayOption(); ?>';
+
+    require(['jquery', 'navigationJs' ],
+        function   ($, navigationJs) {
+            $(document).ready(function() {
+                navigationJs.init();
+                $(window).on('resize', function() {
+                    navigationJs.init();
+                });
+
+                let navigation = $(".navigation");
+                let addmenurole = navigation.find("li");
+                for (let i = 0; i < addmenurole.length; i++) {
+                    $(addmenurole[i]).attr("role","none");
+                }
+                $('.section-items.nav-sections-items').attr('role','none');
+            });
+        });
+</script>

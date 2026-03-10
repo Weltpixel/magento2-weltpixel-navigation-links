@@ -1,0 +1,59 @@
+<?php
+
+$categories = $block->getSelectedCategories();
+$_helper = $this->helper(WeltPixel\NavigationLinks\Helper\Subcategories::class);
+$categoryGridColsNr = $block->getData('number_of_columns');
+$categoryTitlePosition = $block->getData('title_position');
+$categoryShowDescription = $block->getData('display_description');
+$gridColNr = ($categoryGridColsNr) ? $categoryGridColsNr : '4';
+
+if ($categories) :
+?>
+    <div class="wp-subcategories-widget">
+        <ul class="wp-subcategories-grid wp-subcategories-col-<?= /* @noEscape */ $gridColNr ?>">
+            <?php foreach ($categories as $category) : ?>
+                <?php
+                $subCategoryImage = $category->getData('weltpixel_sc_image');
+                if (!$subCategoryImage) {
+                    $subCategoryImage = $block->getViewFileUrl('Magento_Catalog::images/product/placeholder/image.jpg');
+                } else {
+                    $subCategoryImage = $block->getMediaUrl() . $subCategoryImage;
+                    $subCategoryImage = $_helper->parseMediaUrl($subCategoryImage);
+                }
+                $categoryUrl = $_helper->getCustomCategoryUrl($category);
+                ?>
+                <li class="wp-subcategories-item">
+                    <?php if ($categoryTitlePosition == \WeltPixel\NavigationLinks\Model\Attribute\Source\SubCategoryTitlePosition::POSITION_ABOVE_IMAGE) : ?>
+                        <div class="wp-subcategory-name wp-subcategory-top">
+                            <a href="<?= $block->escapeUrl($categoryUrl) ?>" title="<?= $block->escapeHtml($category->getName()); ?> ">
+                                <?= $block->escapeHtml($category->getName()); ?>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                    <a class="wp-subcategories-image" href="<?= $block->escapeUrl($categoryUrl) ?>" title="<?= $block->escapeHtml($category->getName()); ?>">
+                        <img src="<?= $block->escapeUrl($subCategoryImage) ?>"  width="350" alt="<?=  $block->escapeHtml($category->getName()) ?>">
+                    </a>
+                    <?php if ($categoryTitlePosition == \WeltPixel\NavigationLinks\Model\Attribute\Source\SubCategoryTitlePosition::POSITION_UNDER_IMAGE) : ?>
+                        <div class="wp-subcategory-name wp-subcategory-bottom">
+                            <a href="<?= $block->escapeUrl($categoryUrl) ?>" title="<?= $block->escapeHtml($category->getName()); ?> ">
+                                <?= $block->escapeHtml($category->getName()); ?>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($categoryShowDescription) : ?>
+                        <div class="wp-subcategory-description">
+                            <a href="<?= $block->escapeUrl($categoryUrl) ?>" title="<?= $block->escapeHtml($category->getName()); ?>" class="wp-subcateg-descr-content">
+                                <?php
+                                $description = $category->getDescription() ?? '';
+                                $description = preg_replace("/<style.*?\/style>/s", "", $description) ? : $description;
+                                ?>
+                                <?= /* @noEscape */  substr($block->stripTags($description), 0, 400); ?>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
+
