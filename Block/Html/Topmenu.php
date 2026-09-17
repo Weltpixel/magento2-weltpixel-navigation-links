@@ -80,6 +80,60 @@ class Topmenu extends \Magento\Theme\Block\Html\Topmenu
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
+    /**
+     * Allow only a genuine CSS colour through, so a category attribute cannot
+     * break out of the inline <style> block it is emitted into. Anything else
+     * returns empty.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    protected function _cssColor($value)
+    {
+        if (!is_scalar($value)) {
+            return '';
+        }
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '';
+        }
+        if (preg_match('/^#[0-9a-fA-F]{3,8}$/', $value)) {
+            return $value;
+        }
+        if (preg_match('/^[a-zA-Z]+$/', $value)) {
+            return $value;
+        }
+        if (preg_match('/^(?:rgba?|hsla?)\(\s*[0-9a-zA-Z.,%\s\/+-]+\s*\)$/', $value)) {
+            return $value;
+        }
+        return '';
+    }
+
+    /**
+     * Allow only a single CSS length through, for the same reason as _cssColor.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    protected function _cssLength($value)
+    {
+        if (!is_scalar($value)) {
+            return '';
+        }
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '';
+        }
+        $length = '(?:auto|inherit|initial|unset|0|[+-]?\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|pt|ex|ch))';
+        if (preg_match('/^' . $length . '$/i', $value)) {
+            return $value;
+        }
+        if (preg_match('/^calc\(\s*[0-9a-zA-Z.%\s()+*\/-]+\s*\)$/i', $value)) {
+            return $value;
+        }
+        return '';
+    }
+
     protected function _getHtml(
         \Magento\Framework\Data\Tree\Node $menuTree,
         $childrenWrapClass,
@@ -147,7 +201,7 @@ class Topmenu extends \Magento\Theme\Block\Html\Topmenu
 
                 $DynamicScOpts = $parent->getWeltpixelMmDynamicScOpts() ?? '';
                 $columnsNumber = $this->_getColumnsNumber($parent);
-                $dynamicSubcategories = (boolean)$parent->getWeltpixelMmDynamicScFlag() && (in_array($parent->getWeltpixelMmDisplayMode(), ['sectioned', 'fullwidth']));
+                $dynamicSubcategories = (bool)$parent->getWeltpixelMmDynamicScFlag() && (in_array($parent->getWeltpixelMmDisplayMode(), ['sectioned', 'fullwidth']));
                 $columnGroupsSum = 0;
                 $columnGroups = 0;
 
@@ -208,8 +262,8 @@ class Topmenu extends \Magento\Theme\Block\Html\Topmenu
             $child->setIsFirst($counter == 1);
             $child->setIsLast($counter == $childrenCount);
             $child->setPositionClass($itemPositionClassPrefix . $counter);
-            $categLabelText = $child->getData('weltpixel_mm_label_text');
-            $categLabelPostion = $child->getData('weltpixel_mm_label_position');
+            $categLabelText = $this->escapeHtml((string)$child->getData('weltpixel_mm_label_text'));
+            $categLabelPostion = $this->escapeHtmlAttr((string)$child->getData('weltpixel_mm_label_position'));
             $designSettingsEnabled = $this->_wpHelper->isDesignSettingsEnabled();
             $mmHoverOption = $this->_wpHelper->getMegaMenuLinksHoverOption();
             $mmHoverTextUnderline = ($designSettingsEnabled && $mmHoverOption ? $this->_wpHelper->getMegaMenuLinksHoverUnderline() : '');
@@ -246,8 +300,8 @@ class Topmenu extends \Magento\Theme\Block\Html\Topmenu
             $html .= '<li ' . $this->_getRenderedMenuItemAttributes($child) . ' ' . $hasChildren . ' ' . $forceWidth . ' >';
             if (($childLevel >= 1) && $parent->getData('weltpixel_mm_image_enable')) {
                 $categImage = $child->getData('weltpixel_mm_image');
-                $categImageAlign = ($parent->getData('weltpixel_mm_image_name_align')) ? $parent->getData('weltpixel_mm_image_name_align') : 'center';
-                $categImagePosition = $parent->getData('weltpixel_mm_image_position');
+                $categImageAlign = $this->escapeHtmlAttr(($parent->getData('weltpixel_mm_image_name_align')) ? $parent->getData('weltpixel_mm_image_name_align') : 'center');
+                $categImagePosition = $this->escapeHtmlAttr((string)$parent->getData('weltpixel_mm_image_position'));
                 $categImageAlt = $child->getData('weltpixel_mm_image_alt');
                 $categImageContent = '';
                 if ($categImage) {
@@ -255,7 +309,7 @@ class Topmenu extends \Magento\Theme\Block\Html\Topmenu
                     $categImageUrl = str_replace(['media//media', 'media/media'], ['media'], str_replace(['/pub/media'], [''], $mediaUrl) . $categImage);
                     $categImageHeight = $parent->getData('weltpixel_mm_image_height');
                     $categImageWidth = $parent->getData('weltpixel_mm_image_width');
-                    $categImageContent = '<span class="mm-image-wrp"><img loading="lazy" src="' . $categImageUrl . '" width="' . $categImageWidth . '" height="' . $categImageHeight . '" alt="' . $categImageAlt . '" /></span>';
+                    $categImageContent = '<span class="mm-image-wrp"><img loading="lazy" src="' . $this->escapeUrl($categImageUrl) . '" width="' . $this->escapeHtmlAttr($categImageWidth) . '" height="' . $this->escapeHtmlAttr($categImageHeight) . '" alt="' . $this->escapeHtmlAttr($categImageAlt) . '" /></span>';
                 }
                 $outermostClassCode = 'class="mm-image mm-align-' . $categImageAlign
                     . ($categLabelPostion ? ' label-position-' . $categLabelPostion : '')
@@ -313,18 +367,18 @@ class Topmenu extends \Magento\Theme\Block\Html\Topmenu
                 $html .= '<span class="close columns-group last"></span>';
                 $html .= '</ul>';
             }
-            $categImageRadius = $parent->getData('weltpixel_mm_image_radius') ?? '';
+            $categImageRadius = $this->_cssLength($parent->getData('weltpixel_mm_image_radius') ?? '');
 
             if (strlen($categImageRadius)) {
                 $this->inlineStyle .= 'body .nav-sections .navigation ul li.megamenu.level0.' . $parentPositionClass  . ' ul.submenu li a span.mm-image-wrp img'
                     . '{ border-radius:' . $categImageRadius . '; }';
             }
 
-            $categoryFontColor = $child->getWeltpixelMmFontColor() ?? '';
-            $categoryFontHoverColor = $child->getWeltpixelMmFontHoverColor() ?? '';
+            $categoryFontColor = $this->_cssColor($child->getWeltpixelMmFontColor() ?? '');
+            $categoryFontHoverColor = $this->_cssColor($child->getWeltpixelMmFontHoverColor() ?? '');
             $categoryFontTextShadow = false;
-            $categLabelTextColor = $child->getData('weltpixel_mm_label_font_color') ?? '';;
-            $categLabelBackgorundColor = $child->getData('weltpixel_mm_label_background_color') ?? '';;
+            $categLabelTextColor = $this->_cssColor($child->getData('weltpixel_mm_label_font_color') ?? '');
+            $categLabelBackgorundColor = $this->_cssColor($child->getData('weltpixel_mm_label_background_color') ?? '');
 
             if (strlen($categoryFontColor)) {
                 $categoryFontTextShadow = $categoryFontColor;
